@@ -7,21 +7,72 @@ The claim this project is built to test is a **leading-indicator** one: not "sen
 negative," but "complaint theme X spiked N days before the aggregate score dropped." If that
 lead doesn't hold in the data, the honest null goes in the write-up instead.
 
-**Status:** Phase 0, not yet started. The launch to analyse is undecided — see below.
+**The launch:** HELLDIVERS 2 (appid 553850, released 2024-02-08). Chosen over
+Cyberpunk 2077 because it launched well and soured *later*, which leaves a positive
+baseline for the leading-indicator question to be asked against. Reasoning, and the
+deliberate deviation from the spec's 6–24 month recency rule, are in `src/config.py`.
 
-## Current state
+**Status:** Phase 0 complete (Steam). Nothing is analysed yet.
 
 | Piece | State |
 |---|---|
 | Steam review fetcher | Built, tested, live-verified |
-| Launch selection | **Awaiting Eileen (Checkpoint 0)** |
+| Launch selection | Decided 2026-09-13 |
+| Steam corpus | **860,018 reviews, 100.0% of the window** |
 | Reddit pull | Not started — needs API credentials |
 | Sentiment scoring | Not started |
 | Theme taxonomy | Not started |
 | Lag analysis | Not started |
 
-Nothing here analyses anything yet. There are no findings on this page because no data
-has been pulled for a chosen launch.
+## The corpus
+
+Window: 2024-01-25 to 2024-08-09 (14 days pre-launch, 183 post). Steam reports
+860,089 reviews in that range; the pull retrieved 860,018 — the 71-review gap is
+reviews deleted between the count probe and the fetch. Zero duplicates, zero items
+outside the window.
+
+The pre-launch fortnight contains **zero** reviews: Helldivers 2 had no Steam early
+access, so the spec's "two weeks before launch" yields nothing for this title.
+
+### Weekly volumes
+
+| Week | Reviews | Positive |
+|---|---|---|
+| 2024-W06 (launch) | 30,918 | 73.5% |
+| 2024-W07 | 61,063 | 76.0% |
+| 2024-W08 | 76,597 | 80.9% |
+| 2024-W09 | 45,206 | 88.1% |
+| 2024-W10 – W17 | 9,529 – 48,924 | 78–86% |
+| **2024-W18** | **258,530** | **58.5%** |
+| 2024-W19 | 152,153 | 83.8% |
+| 2024-W20 – W31 | 1,337 – 9,417 | 71–85% |
+| 2024-W32 | 5,179 | 52.8% |
+
+W18 alone is 30% of the entire corpus. Note W19: volume stays enormous while the
+positive share snaps back to 83.8% — whatever happened, the reversal is in the data
+as clearly as the event. A second, smaller dip appears in W32 on low volume.
+
+These are counts and Steam's own thumbs-up flag, not sentiment analysis. No claim
+about *why* anything moved belongs here until Phases 2–4 have run.
+
+## What didn't work
+
+Two failures worth keeping, both caught only by checking totals against an
+independent source:
+
+1. **Deep pagination truncates silently.** A single request for the whole window
+   returned 65,496 of 858,566 reviews — 7.6% — with no error, missing February
+   through April entirely. The same endpoint returned 48,706 of 48,708 for one
+   launch week. Fixed by bisecting the window on Steam's own review counts until
+   every chunk paginates shallowly.
+2. **The integrity check passed the truncated pull.** Duplicates, window bounds,
+   empty text and gap distributions were all clean — because every review collected
+   *was* genuine. There were simply 92% too few. Coverage against an expected total
+   is now the first check, not an afterthought.
+
+A third, subtler one: Steam intermittently serves an empty page mid-sequence, which
+reads as a clean end of listing. Because the dud response was cached like any other,
+retrying replayed the truncation exactly. Retries now bypass the cache.
 
 ## The Steam fetcher
 
