@@ -101,6 +101,61 @@ copypasta wasn't the mechanism, which is not the same as saying nothing was coor
 And 27.5% of all reviews are three words or fewer, so much of the ~28% baseline is short
 generic text ("good", "fun") colliding by chance rather than anyone pasting anything.
 
+## Complaint themes
+
+Nine themes, 182 seed phrases, applied to the 123,316 negative English reviews.
+Multi-label: "nerfed into the ground and it crashes" is genuinely two complaints.
+
+| Theme | Reviews | Share of negatives |
+|---|---|---|
+| `psn_access` | 50,719 | 41.1% |
+| `bugs_stability` | 22,309 | 18.1% |
+| `balance` | 13,277 | 10.8% |
+| `price_value` | 9,595 | 7.8% |
+| `content_design` | 8,691 | 7.0% |
+| `dev_conduct` | 8,563 | 6.9% |
+| `monetisation` | 6,866 | 5.6% |
+| `performance` | 5,079 | 4.1% |
+| **matched ≥1 theme** | **86,129** | **69.8%** |
+
+How the taxonomy got there, since the intermediate numbers are the interesting part:
+
+| Configuration | Coverage |
+|---|---|
+| The spec's six themes, plus balance and dev_conduct | 36.0% |
+| + `psn_access` | 66.1% |
+| + bugs and content gap fills (**current**) | **69.8%** |
+| + developer-mention fills (**rejected**) | 74.3% |
+
+One theme — account access — took coverage from a third to two-thirds. It was added
+only because mining showed a large cluster with nowhere to go, and it is now the
+largest theme in the corpus by a wide margin.
+
+**The rejected 4.5pp.** Adding `devs`, `arrowhead` and `developer` to `dev_conduct`
+would have bought 74.3% coverage. Seed attribution showed `devs` (11.8% of sampled
+negatives) and `arrowhead` (8.0%) doing nearly all of that work — matching any
+*mention* of the developer, including balance complaints like "devs keep nerfing
+everything". Since Phase 4's entire leading-indicator claim rests on theme share
+over time, a theme that silently absorbs other themes' complaints would corrupt the
+one chart the project turns on. The coverage was not worth it.
+
+**Stated limits.** `psn_access` is carried by bare `sony` (12.1%) and `psn` (7.6%);
+the precise phrases — `account linking` (0.6%), `delisted` (0.3%) — contribute
+almost nothing. In negative reviews that is still a strong signal, but the theme
+measures *mentions of Sony or PSN*, not account-linking complaints specifically.
+`grind`/`grindy` sit in `content_design` though grinding here is usually for Super
+Credits, which arguably makes them monetisation.
+
+**The 30.2% that matches nothing is not all fixable.** Some is missing vocabulary.
+Much of it is complaint without complaint words:
+
+> "Arrowhead struck gold but are determined to find copper."
+> "Just when you thought the hole couldn't get any deeper, they got a drill."
+
+No keyword list reaches those. That is the ceiling of a transparent keyword
+taxonomy, and the reason the spec suggests topic modelling as a cross-check rather
+than a replacement.
+
 ## What didn't work
 
 Two failures worth keeping, both caught only by checking totals against an
