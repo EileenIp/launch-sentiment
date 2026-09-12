@@ -101,6 +101,84 @@ copypasta wasn't the mechanism, which is not the same as saying nothing was coor
 And 27.5% of all reviews are three words or fewer, so much of the ~28% baseline is short
 generic text ("good", "fun") colliding by chance rather than anyone pasting anything.
 
+## The headline question: did any complaint theme lead the score?
+
+**No. The leading-indicator claim does not hold for this launch, and the reason is
+structural rather than statistical.**
+
+The claim was: complaint theme X spikes N days before the aggregate review score
+moves, giving a community team early warning. Tested over 185 days with 200+ reviews,
+2024-02-08 to 2024-11-03, correlating day-over-day change in each theme's share of
+that day's negatives against day-over-day change in positive share, at lags of ±14
+days.
+
+Raw cross-correlation looked encouraging — seven of eight themes showed an apparent
+lead, up to 12 days. Three checks removed all of them.
+
+**1. A rotation test.** Reporting the best of 29 lags means taking the extreme of 29
+attempts, which finds something in pure noise. Rotating a theme series preserves its
+own autocorrelation while destroying alignment with the score, giving a null for
+exactly the statistic reported. Chance alone produces a median best-of-29-lags r of
+about −0.15, which is most of what the raw table showed.
+
+**2. Correcting for testing eight themes.** At α = 0.05/8 = 0.00625, only
+`psn_access` survives — and its best lag is **0**.
+
+**3. Sensitivity to how thin a day is allowed to be.** This is what settled it:
+
+| Min reviews/day | Days | `psn_access` | `performance` | `balance` |
+|---|---|---|---|---|
+| 200 | 185 | **+0d p=0.00** | +3d p=0.01 | +1d p=0.02 |
+| 400 | 128 | **+0d p=0.00** | +12d p=0.01 | +0d p=0.30 |
+| 800 | 101 | −11d p=0.00 | +12d p=0.25 | −14d p=0.00 |
+| 1500 | 79 | **+0d p=0.00** | −8d p=0.80 | +1d p=0.04 |
+
+`performance` moves +3d → +12d → +12d → −8d with p running to 0.80; `balance` flips
++1d → 0d → −14d. A real lead persists as measurement improves. These do the opposite,
+which is what small denominators produce: on a 150-review day there are perhaps 15
+negatives, so one review swings a theme share by 7 points.
+
+### Why there was nothing to lead
+
+Both sentiment events were triggered by discrete, dated developer actions, so the
+theme mix and the score moved on the same day by construction:
+
+| Date | Reviews | Positive | `psn_access` | `balance` | |
+|---|---|---|---|---|---|
+| 2024-05-02 | 968 | 86.7% | 20.9% | 17.8% | |
+| **2024-05-03** | **36,055** | **62.8%** | **57.3%** | 12.2% | Account Linking announced |
+| 2024-05-06 | 78,185 | 88.3% | 50.0% | 9.6% | Sony reverses |
+| 2024-08-05 | 183 | 89.1% | 5.0% | 0.0% | |
+| **2024-08-06** | **764** | **71.2%** | 3.2% | **46.4%** | Patch 1.001.002 |
+
+Volume rose 37× and the theme mix tripled on the announcement date. You cannot get
+early warning of an announcement from reactions to it. Early warning here would need
+data that moves before the announcement — crash telemetry, refund rates, or
+discussion-forum volume, none of which is in review text.
+
+### What the data does support
+
+Not prediction, but **same-day diagnosis**. On 3 May the theme mix identified the
+cause within hours — `psn_access` 21%→57% while `balance` fell 18%→12%. On 6 August
+it did the same in the other direction — `balance` 0%→46% with `psn_access` flat at
+3%. For a community team asking "what is this actually about" on the morning of a
+spike, that is real operational value. It is just not the value originally claimed.
+
+### The window was extended to make this a fair test
+
+The spec's six-month window closed on 2024-08-09, three days into the August nerf
+controversy — the one event here that could plausibly have built gradually. Judging
+the central claim on a truncated event would have produced a null by accident of the
+window. The window was extended to 271 days (to 2024-11-05), capturing the nerf
+patch, an emergency hotfix, Arrowhead's "60 Day Timeline" commitment, the 1.001.100
+rebalance, and the concluding update. The August event got its fair test and returned
+the same answer.
+
+Worth noting what the extension revealed: 2024-08-07 to 08-11 are the five lowest
+positive-share days in the entire corpus, below anything during the PSN review-bomb.
+By score the nerf controversy was the deeper wound; by volume it was a fiftieth the
+size.
+
 ## The scorer validation, and why it changed the project
 
 200 reviews were hand-labelled blind — no scorer output, no Steam thumbs-up visible —
