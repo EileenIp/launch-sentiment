@@ -68,17 +68,20 @@ THEMES = {
         "summer child", "incompetent", "incompetence", "excuses", "lied",
         "ignoring", "ignored", "tricked",
     ],
+    # Added by Eileen 2026-09-13. Platform access, kept separate from dev_conduct
+    # because it is about Sony and account requirements rather than developer
+    # behaviour — and because it is the proximate cause of the W18 spike, so
+    # burying it inside another theme would hide the one most likely to answer
+    # the leading-indicator question.
+    #
+    # Two seeds here are broader than the rest and worth a second look when
+    # editing: "region" can match unrelated uses, and "outsourced" was surfaced by
+    # mining at high lift but its link to the account-linking story is unverified
+    # — it may be about outsourced development or support instead.
+    "psn_access": [
+        "sony lied", "psn", "playstation account", "playstation network",
+        "account linking", "link account", "delisted", "still delisted",
+        "delisted countries", "still unavailable", "region locked",
+        "region lock", "not available in", "outsourced", "sony",
+    ],
 }
-
-# Candidate ninth theme, NOT enabled — raised for Eileen at Checkpoint 3.
-#
-# Mining surfaced a distinct account-linking and regional-delisting cluster that
-# does not belong in dev_conduct: it is about platform access, not developer
-# behaviour, and it is the proximate cause of the W18 spike this whole project is
-# built around. Folding it into dev_conduct would hide the single theme most likely
-# to answer the leading-indicator question.
-CANDIDATE_PSN_ACCESS = [
-    "sony lied", "psn", "playstation account", "account linking", "delisted",
-    "still delisted", "delisted countries", "still unavailable", "region",
-    "outsourced", "sony",
-]

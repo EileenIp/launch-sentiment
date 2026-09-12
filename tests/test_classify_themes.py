@@ -49,7 +49,13 @@ def test_the_two_added_themes_are_present():
     assert {"balance", "dev_conduct"} <= set(taxonomy.THEMES)
 
 
-def test_candidate_psn_theme_is_not_enabled():
-    """It is raised for Eileen at Checkpoint 3, not switched on by the agent."""
-    assert "psn_access" not in taxonomy.THEMES
-    assert taxonomy.CANDIDATE_PSN_ACCESS
+def test_psn_access_is_enabled_as_its_own_theme():
+    """Enabled by Eileen 2026-09-13 — kept out of dev_conduct on purpose."""
+    assert "psn_access" in taxonomy.THEMES
+
+
+def test_an_account_linking_complaint_lands_in_psn_not_dev_conduct():
+    found = classify_themes.themes_for("forced psn account linking, delisted in my country")
+
+    assert "psn_access" in found
+    assert "dev_conduct" not in found
