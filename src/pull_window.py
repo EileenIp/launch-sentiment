@@ -134,8 +134,28 @@ def run(appid: int | None = None, launch_date: str | None = None) -> list[dict]:
         if pages["n"] % 50 == 0:
             print(f"  {pages['n']} pages...", flush=True)
 
-    reviews = steam_fetch.fetch_reviews(appid, since=since, until=until, on_page=progress)
-    print(f"pulled {len(reviews):,} reviews across {pages['n']} pages")
+    def chunk_done(row):
+        gap = row["expected"] - row["fetched"]
+        flag = "" if abs(gap) <= max(5, row["expected"] * 0.001) else f"  <-- SHORT BY {gap:,}"
+        print(
+            f"  chunk {row['chunk']}: {row['since'].date()}..{row['until'].date()} "
+            f"expected {row['expected']:,} got {row['fetched']:,}{flag}",
+            flush=True,
+        )
+
+    expected_total = steam_fetch.count_reviews(appid, since, until)
+    print(f"Steam reports {expected_total:,} reviews in this window")
+
+    reviews, coverage = steam_fetch.fetch_window_chunked(
+        appid, since, until, on_page=progress, on_chunk=chunk_done
+    )
+    print(f"pulled {len(reviews):,} reviews across {pages['n']} pages, {len(coverage)} chunks")
+
+    # The check whose absence let a 7.6%-coverage pull look healthy.
+    coverage_ratio = len(reviews) / expected_total if expected_total else 0.0
+    print(f"coverage: {len(reviews):,} / {expected_total:,} = {coverage_ratio:.1%}")
+    if coverage_ratio < 0.95:
+        print("  WARNING: coverage below 95% — the corpus is incomplete, do not analyse it")
 
     save_reviews(reviews, appid)
     print(f"saved to {reviews_path(appid)}")

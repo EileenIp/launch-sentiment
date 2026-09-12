@@ -266,6 +266,110 @@ def recon(appid: int, session: requests.Session | None = None) -> ReconResult:
     return result
 
 
+def count_reviews(
+    appid: int,
+    since: datetime,
+    until: datetime,
+    session: requests.Session | None = None,
+) -> int:
+    """How many reviews Steam says exist in a window. One request, no pagination."""
+    summary = _http_get(
+        config.STEAM_APPREVIEWS_URL.format(appid=appid),
+        {
+            "json": 1,
+            "filter": config.REVIEW_FILTER,
+            "language": config.REVIEW_LANGUAGE,
+            "review_type": config.REVIEW_TYPE,
+            "purchase_type": config.PURCHASE_TYPE,
+            "num_per_page": 0,
+            "cursor": "*",
+            "start_date": int(since.timestamp()),
+            "end_date": int(until.timestamp()),
+            "date_range_type": config.DATE_RANGE_TYPE,
+        },
+        session=session,
+    ).get("query_summary") or {}
+    return summary.get("total_reviews", 0)
+
+
+def plan_chunks(
+    appid: int,
+    since: datetime,
+    until: datetime,
+    counter=count_reviews,
+    _depth: int = 0,
+) -> list[tuple[datetime, datetime, int]]:
+    """Split a window into ranges small enough to paginate fully.
+
+    Bisects on Steam's own review count rather than on a fixed calendar interval,
+    because review density varies by orders of magnitude across a launch window —
+    a fixed weekly split would be wasteful in quiet months and still too deep
+    during a review-bomb.
+    """
+    total = counter(appid, since, until)
+
+    if total <= config.SAFE_CHUNK_REVIEWS or _depth >= config.MAX_CHUNK_SPLIT_DEPTH:
+        return [(since, until, total)]
+
+    midpoint = since + (until - since) / 2
+    # Sub-second ranges cannot be split further.
+    if midpoint <= since or midpoint >= until:
+        return [(since, until, total)]
+
+    return plan_chunks(appid, since, midpoint, counter, _depth + 1) + plan_chunks(
+        appid, midpoint, until, counter, _depth + 1
+    )
+
+
+def fetch_window_chunked(
+    appid: int,
+    since: datetime,
+    until: datetime,
+    session: requests.Session | None = None,
+    page_fetcher=fetch_page,
+    counter=count_reviews,
+    on_page=None,
+    on_chunk=None,
+) -> tuple[list[dict], list[dict]]:
+    """Pull a whole window via chunks. Returns (reviews, per-chunk coverage rows)."""
+    chunks = plan_chunks(appid, since, until, counter=counter)
+
+    collected: list[dict] = []
+    seen_ids: set[str] = set()
+    coverage: list[dict] = []
+
+    for index, (chunk_since, chunk_until, expected) in enumerate(chunks, start=1):
+        chunk_reviews = fetch_reviews(
+            appid,
+            since=chunk_since,
+            until=chunk_until,
+            session=session,
+            page_fetcher=page_fetcher,
+            on_page=on_page,
+        )
+        new = 0
+        for review in chunk_reviews:
+            if review["recommendationid"] in seen_ids:
+                continue
+            seen_ids.add(review["recommendationid"])
+            collected.append(review)
+            new += 1
+
+        row = {
+            "chunk": index,
+            "since": chunk_since,
+            "until": chunk_until,
+            "expected": expected,
+            "fetched": len(chunk_reviews),
+            "new": new,
+        }
+        coverage.append(row)
+        if on_chunk is not None:
+            on_chunk(row)
+
+    return collected, coverage
+
+
 def window_for_launch(launch_date: str) -> tuple[datetime, datetime]:
     """The spec's pull window: PRE_LAUNCH_DAYS before launch to POST_LAUNCH_DAYS after."""
     launch = datetime.fromisoformat(launch_date).replace(tzinfo=timezone.utc)

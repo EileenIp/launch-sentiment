@@ -190,6 +190,81 @@ def test_fetch_reviews_sends_no_date_bounds_when_the_window_is_open():
     assert captured["start_date"] is None
 
 
+def test_plan_chunks_leaves_a_small_window_whole():
+    counts = lambda appid, since, until: 1_000
+
+    chunks = steam_fetch.plan_chunks(1, datetime(2024, 1, 1, tzinfo=timezone.utc),
+                                     datetime(2024, 6, 1, tzinfo=timezone.utc), counter=counts)
+
+    assert len(chunks) == 1
+
+
+def test_plan_chunks_bisects_until_every_chunk_is_paginable():
+    """Deep cursor pagination silently truncates; no chunk may exceed the safe size."""
+    window_start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    window_end = datetime(2024, 2, 1, tzinfo=timezone.utc)
+    total = 320_000
+
+    def counts(appid, since, until):
+        # Uniform density, so a count is proportional to the span.
+        span = (until - since) / (window_end - window_start)
+        return int(total * span)
+
+    chunks = steam_fetch.plan_chunks(1, window_start, window_end, counter=counts)
+
+    assert len(chunks) > 1
+    assert all(expected <= config.SAFE_CHUNK_REVIEWS for _, _, expected in chunks)
+    # Chunks must tile the window with no gaps.
+    assert chunks[0][0] == window_start
+    assert chunks[-1][1] == window_end
+    for earlier, later in zip(chunks, chunks[1:]):
+        assert earlier[1] == later[0]
+
+
+def test_plan_chunks_splits_a_dense_period_more_finely_than_a_quiet_one():
+    window_start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    spike_start = datetime(2024, 1, 16, tzinfo=timezone.utc)
+    window_end = datetime(2024, 2, 1, tzinfo=timezone.utc)
+
+    def counts(appid, since, until):
+        # Everything is in the back half of the window.
+        overlap_start = max(since, spike_start)
+        if overlap_start >= until:
+            return 100
+        return int(200_000 * ((until - overlap_start) / (window_end - spike_start)))
+
+    chunks = steam_fetch.plan_chunks(1, window_start, window_end, counter=counts)
+    quiet = [c for c in chunks if c[1] <= spike_start]
+    dense = [c for c in chunks if c[0] >= spike_start]
+
+    assert len(dense) > len(quiet)
+
+
+def test_fetch_window_chunked_deduplicates_across_chunk_boundaries():
+    """Adjacent chunks share a boundary instant, so the same review can appear twice."""
+    boundary = _raw(99, 2024, 1, 16)
+
+    def counts(appid, since, until):
+        return 100_000 if (until - since).days > 20 else 10
+
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None):
+        if cursor == "*":
+            return {"reviews": [boundary], "cursor": "c2"}
+        return {"reviews": [], "cursor": None}
+
+    reviews, coverage = steam_fetch.fetch_window_chunked(
+        1,
+        datetime(2024, 1, 1, tzinfo=timezone.utc),
+        datetime(2024, 2, 1, tzinfo=timezone.utc),
+        page_fetcher=pager,
+        counter=counts,
+    )
+
+    assert len(coverage) > 1, "window should have been split"
+    assert len(reviews) == 1, "the boundary review must not be counted twice"
+    assert sum(row["new"] for row in coverage) == 1
+
+
 def test_cache_path_separates_identical_cursors_under_different_windows():
     """A cursor means different things under different date bounds — same key would poison the cache."""
     same_cursor = "AoJw+7Xz1PYCf7ay1g4=="

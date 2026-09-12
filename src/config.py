@@ -63,10 +63,12 @@ PURCHASE_TYPE = "all"
 # thousands of requests to reach data the window starts at.
 DATE_RANGE_TYPE = "include"
 
-# Valve publishes no rate limit for this endpoint. 1.5s between pages is well
-# inside what the community reports as safe; the backoff below handles the case
-# where that assumption turns out to be wrong on a large pull.
-REQUEST_DELAY_SECONDS = 1.5
+# Valve publishes no rate limit for this endpoint. Started at 1.5s and dropped to
+# 0.5s after ~1,150 sequential requests returned zero 429s — at 8,586 pages for
+# this window, 1.5s meant a 3.6-hour pull. The backoff below plus the page cache
+# make a wrong guess cheap: a rate-limited run retries, and an abandoned one
+# resumes from disk rather than re-fetching.
+REQUEST_DELAY_SECONDS = 0.5
 REQUEST_TIMEOUT_SECONDS = 30
 MAX_RETRIES = 5
 BACKOFF_BASE_SECONDS = 2.0
@@ -74,3 +76,19 @@ BACKOFF_BASE_SECONDS = 2.0
 # Steam occasionally returns the same cursor forever instead of an empty page at
 # the end of a listing. Without a hard stop that is an infinite loop.
 MAX_PAGES_PER_PULL = 2000
+
+# Cursor pagination silently dies on deep listings. Measured 2026-09-13 on appid
+# 553850: a request for the full 2024-01-25..2024-08-09 window (858,566 reviews)
+# stopped after 656 pages with 65,496 collected — 7.6% coverage, no error, no
+# warning, and the truncation looked like clean data. The same endpoint returned
+# 48,706 of 48,708 (100.0%) for a single launch week in 489 pages, terminating
+# properly on an empty page.
+#
+# So the window is split into chunks small enough that no single cursor sequence
+# gets near that depth. 40,000 leaves clear margin below the observed failure
+# point while keeping the number of count-probe requests low.
+SAFE_CHUNK_REVIEWS = 40_000
+
+# Guard against pathological recursion if a single day somehow exceeds the chunk
+# size — at that point the chunk is taken as-is and the coverage check reports it.
+MAX_CHUNK_SPLIT_DEPTH = 12
