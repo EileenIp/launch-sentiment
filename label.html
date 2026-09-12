@@ -22,7 +22,7 @@
  <button class="m" onclick="lab('mixed-neutral')">mixed-neutral <kbd>3</kbd></button>
  <button class="s" onclick="back()">&larr; back</button>
 </div>
-<div class="btns"><button class="s" style="flex:1;background:#7c6cf0" onclick="exportNow()">Download labels so far</button></div>
+<div class="btns"><button class="s" style="flex:1;background:#7c6cf0" onclick="exportNow()">Download labels so far</button><button class="s" style="flex:1;background:#3f8f8f" onclick="showText()">Show labels as text</button></div><textarea id="txt" style="display:none;width:100%;height:150px;background:#12121a;color:#9fe;border:1px solid #3f8f8f;border-radius:8px;padding:10px;font:12px monospace"></textarea>
 <div class="meta"><span>Keys: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>, <kbd>&larr;</kbd> to go back. Progress saves automatically.</span></div>
 <div id="done" style="display:none"><b>All 200 labelled.</b><br>Download and save it over <code>data/validation/validation_sample.csv</code>.<br><a class="dl" id="dl">Download labelled CSV</a></div>
 <script>
@@ -52,6 +52,7 @@ function mk(){
   a.href=URL.createObjectURL(b); a.download='validation_sample.csv';
 }
 function exportNow(){ mk(); const n=Object.keys(L).length; document.getElementById('dl').click(); alert('Exported '+n+' of '+D.length+' labels. Save it over data/validation/validation_sample.csv');}
+function showText(){ const t=document.getElementById('txt'); t.style.display='block'; t.value=JSON.stringify(L); t.select(); try{document.execCommand('copy')}catch(e){} alert('Copied '+Object.keys(L).length+' labels to the clipboard. Paste them into the chat.');}
 document.addEventListener('keydown',e=>{
   if(e.key==='1')lab('positive'); else if(e.key==='2')lab('negative');
   else if(e.key==='3')lab('mixed-neutral'); else if(e.key==='ArrowLeft')back();
