@@ -37,6 +37,25 @@ TARGET_LAUNCH_DATE: str | None = "2024-02-08"  # store release date, confirmed v
 PRE_LAUNCH_DAYS = 14
 POST_LAUNCH_DAYS = 183
 
+# --- Scope ---
+#
+# EILEEN DECIDES, 2026-09-13: Steam only for now. Reddit is not pulled.
+#
+# State this as what it is. The spec allows a Steam-only project when "Reddit
+# coverage is too thin" — that is NOT what happened here. Reddit was never
+# attempted; this is a scope decision, not a data-availability finding, and the
+# write-up must not blur the two.
+#
+# What it costs: the leading-indicator question loses its most plausible early
+# channel. Complaints typically surface in discussion threads before they surface
+# as review-score movement, so Reddit was the likeliest place for a lead to be
+# visible. Steam-only narrows the claim to "did complaint themes inside reviews
+# move before the aggregate score did" — still a real question against 860k
+# reviews at daily granularity, but a smaller one than the spec scoped.
+#
+# Reversible: the corpus, scorers and lag analysis are all source-agnostic.
+SOURCES = ("steam",)
+
 # --- Phase 1: corpus hygiene decisions ---
 #
 # EILEEN DECIDES, 2026-09-13: reviews where steam_purchase is false stay in.
@@ -91,6 +110,33 @@ KEEP_NON_STEAM_PURCHASES = True
 # question and a stronger one than either weighting scheme.
 DOWNWEIGHT_COPYPASTA = False
 COPYPASTA_WEIGHT: float | None = None
+
+# EILEEN DECIDES, 2026-09-13: scoring is English-only.
+#
+# The rule: keep reviews whose Steam `language` field is exactly "english".
+# That is 631,806 of 860,018 — 73.5%.
+#
+# Why: VADER is an English lexicon by construction, so scoring non-English text
+# with it produces numbers that look real and mean nothing. A scorer comparison
+# run over 27% such text would not settle anything. Hand-labelling would also be
+# impossible across Chinese, German and Russian.
+#
+# The bias this introduces, to be stated in the write-up rather than buried:
+# 77,432 Simplified Chinese reviews (9.0%) are the largest excluded group, and a
+# non-English playerbase may complain about different things — regional pricing,
+# server locations, localisation quality — so the theme mix in Phase 3 describes
+# English-speaking players, not all players.
+SCORING_LANGUAGES = ("english",)
+
+# Validation sampling: reviews of 4 words or fewer ("egg", "nice", "FREEEEEEDOM")
+# are trivially classified by any scorer, so they inflate both scorers' agreement
+# equally and hide the difference the validation set exists to measure — while
+# consuming a third of the labelling hour. They are excluded from the sample and
+# checked separately by scorer-vs-scorer agreement, which needs no hand labels.
+#
+# The consequence, which the write-up states plainly: the agreement numbers
+# describe substantive reviews, not the corpus as a whole.
+VALIDATION_MIN_WORDS = 5
 
 # --- Steam API ---
 #
