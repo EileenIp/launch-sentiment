@@ -54,6 +54,21 @@ POST_LAUNCH_DAYS = 183
 # copypasta call.
 KEEP_NON_STEAM_PURCHASES = True
 
+# EILEEN DECIDES, 2026-09-13: review-bomb copypasta is weighted DOWN rather than
+# counted as organic sentiment.
+#
+# There is no neutral option here — mass-coordinated identical reviews are both
+# "not one person's opinion expressed N times" and "a real community event that
+# genuinely happened." Weighting down says the first reading governs the sentiment
+# index. What it does not do is hide the second: per the spec, the README shows the
+# key moment BOTH ways, weighted and unweighted, so a reader can see how much of
+# W18's collapse is coordination and how much is distinct people.
+#
+# The weighting scheme itself is set once detection has run — picking a number
+# before knowing whether copypasta is 2% or 40% of the spike would be arbitrary.
+DOWNWEIGHT_COPYPASTA = True
+COPYPASTA_WEIGHT: float | None = None  # set at Checkpoint 1, with real numbers in hand
+
 # --- Steam API ---
 #
 # The public appreviews endpoint. No key, no auth, no quota published by Valve.
