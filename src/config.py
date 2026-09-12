@@ -10,12 +10,26 @@ STEAM_CACHE_DIR = RAW_DATA_DIR / "steam_cache"
 
 # --- Phase 0: the launch under analysis ---
 #
-# EILEEN DECIDES (Checkpoint 0). Deliberately left unset: the spec requires the
-# launch to be one she knows well enough to be questioned about as a player, so
-# the agent must not fill this in. Set TARGET_APPID and TARGET_LAUNCH_DATE
-# together — every window calculation below derives from the launch date.
-TARGET_APPID: int | None = None
-TARGET_LAUNCH_DATE: str | None = None  # "YYYY-MM-DD", the store release date
+# EILEEN DECIDES (Checkpoint 0) — decided 2026-09-13: HELLDIVERS 2.
+#
+# Chosen over Cyberpunk 2077, which was considered and rejected. Recon numbers
+# that drove it (pulled 2026-09-13, real):
+#   Cyberpunk 2077  appid 1091500  released 2020-12-09   979,443 reviews  86.9% positive
+#   HELLDIVERS 2    appid  553850  released 2024-02-08 1,161,809 reviews  75.5% positive
+#
+# Why this one: Helldivers 2 launched well and soured later, so there is a genuine
+# positive baseline before the sentiment event — which is what makes the spec's
+# leading-indicator question answerable at all. Cyberpunk collapsed on day one,
+# leaving nothing for complaint themes to lead, and is also the most-analysed
+# launch in games data, forfeiting the spec's "chosen for its specific arc"
+# defence against the overused-dataset pitfall.
+#
+# Known deviation from the spec, accepted deliberately: the spec asks for a launch
+# 6-24 months old and this one is 31 months (Feb 2024 vs today 2026-09-13). Eileen's
+# call. The trade is recency against a far better-shaped sentiment arc. Worth having
+# a rehearsed answer for, since "why this launch" is an obvious interview question.
+TARGET_APPID: int | None = 553850
+TARGET_LAUNCH_DATE: str | None = "2024-02-08"  # store release date, confirmed via appdetails
 
 # Pull window, relative to TARGET_LAUNCH_DATE (spec Phase 0): two weeks before
 # launch to catch any early-access run-up, six months after to cover the full
@@ -41,6 +55,13 @@ REVIEW_FILTER = "recent"
 REVIEW_LANGUAGE = "all"
 REVIEW_TYPE = "all"
 PURCHASE_TYPE = "all"
+
+# Undocumented but verified working (2026-09-13, appid 553850): start_date/end_date
+# as unix timestamps with date_range_type="include" makes the endpoint seek directly
+# to a historical window. Without it, reaching a 2024 launch window means paging
+# backwards through every review since, which for a million-review game is tens of
+# thousands of requests to reach data the window starts at.
+DATE_RANGE_TYPE = "include"
 
 # Valve publishes no rate limit for this endpoint. 1.5s between pages is well
 # inside what the community reports as safe; the backoff below handles the case

@@ -37,9 +37,12 @@ def _utc(timestamp: int) -> datetime:
     return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
-def _cache_path(appid: int, cursor: str) -> Path:
-    # Cursors contain characters that are not filesystem-safe, and can be long.
-    digest = hashlib.sha256(cursor.encode("utf-8")).hexdigest()[:16]
+def _cache_path(appid: int, cursor: str, start_date: int | None = None, end_date: int | None = None) -> Path:
+    # Cursors contain characters that are not filesystem-safe, and can be long. The
+    # date range is part of the key because the same cursor means different things
+    # under different range bounds.
+    key = f"{cursor}|{start_date}|{end_date}"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
     return config.STEAM_CACHE_DIR / f"{appid}" / f"{digest}.json"
 
 
@@ -70,25 +73,33 @@ def _http_get(url: str, params: dict, session: requests.Session | None = None) -
     raise SteamAPIError(f"{url}: gave up after {config.MAX_RETRIES} attempts") from last_error
 
 
-def fetch_page(appid: int, cursor: str = "*", session: requests.Session | None = None) -> dict:
-    """One page of reviews. Cached on disk by (appid, cursor); a cache hit makes no request."""
-    path = _cache_path(appid, cursor)
+def fetch_page(
+    appid: int,
+    cursor: str = "*",
+    session: requests.Session | None = None,
+    start_date: int | None = None,
+    end_date: int | None = None,
+) -> dict:
+    """One page of reviews. Cached on disk by (appid, cursor, date range); a hit makes no request."""
+    path = _cache_path(appid, cursor, start_date, end_date)
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
 
-    payload = _http_get(
-        config.STEAM_APPREVIEWS_URL.format(appid=appid),
-        {
-            "json": 1,
-            "filter": config.REVIEW_FILTER,
-            "language": config.REVIEW_LANGUAGE,
-            "review_type": config.REVIEW_TYPE,
-            "purchase_type": config.PURCHASE_TYPE,
-            "num_per_page": config.NUM_PER_PAGE,
-            "cursor": cursor,
-        },
-        session=session,
-    )
+    params = {
+        "json": 1,
+        "filter": config.REVIEW_FILTER,
+        "language": config.REVIEW_LANGUAGE,
+        "review_type": config.REVIEW_TYPE,
+        "purchase_type": config.PURCHASE_TYPE,
+        "num_per_page": config.NUM_PER_PAGE,
+        "cursor": cursor,
+    }
+    if start_date is not None and end_date is not None:
+        params.update(
+            {"start_date": start_date, "end_date": end_date, "date_range_type": config.DATE_RANGE_TYPE}
+        )
+
+    payload = _http_get(config.STEAM_APPREVIEWS_URL.format(appid=appid), params, session=session)
     if payload.get("success") != 1:
         raise SteamAPIError(f"appid {appid}: appreviews returned success={payload.get('success')}")
 
@@ -128,6 +139,7 @@ def fetch_reviews(
     until: datetime | None = None,
     session: requests.Session | None = None,
     page_fetcher=fetch_page,
+    on_page=None,
 ) -> list[dict]:
     """All reviews for appid, newest first, optionally bounded to [since, until].
 
@@ -139,12 +151,21 @@ def fetch_reviews(
     cursor = "*"
     seen_cursors: set[str] = set()
 
+    # Ask Steam to seek to the window rather than paging back to it from today.
+    start_epoch = int(since.timestamp()) if since is not None else None
+    end_epoch = int(until.timestamp()) if until is not None else None
+
     for _ in range(config.MAX_PAGES_PER_PULL):
         if cursor in seen_cursors:
             break
         seen_cursors.add(cursor)
 
-        payload = page_fetcher(appid, cursor, session=session)
+        payload = page_fetcher(
+            appid, cursor, session=session, start_date=start_epoch, end_date=end_epoch
+        )
+        if on_page is not None:
+            on_page(payload)
+
         raw_reviews = payload.get("reviews") or []
         if not raw_reviews:
             break

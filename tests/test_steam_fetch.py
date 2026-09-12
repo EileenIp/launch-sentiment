@@ -38,7 +38,7 @@ def _pager(pages):
     """Fake page_fetcher: serves the given pages in order, keyed by cursor."""
     calls = {"count": 0}
 
-    def fetch(appid, cursor="*", session=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
         index = calls["count"]
         calls["count"] += 1
         if index >= len(pages):
@@ -89,7 +89,7 @@ def test_fetch_reviews_stops_when_the_cursor_repeats():
     """Steam can hand back the same cursor forever instead of an empty page."""
     stuck = {"reviews": [_raw(1, 2025, 5, 3)], "cursor": "same"}
 
-    def fetch(appid, cursor="*", session=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
         return stuck
 
     reviews = steam_fetch.fetch_reviews(123, page_fetcher=fetch)
@@ -159,6 +159,46 @@ def test_weekly_volumes_buckets_by_iso_week_with_positive_share():
     assert rows[0]["reviews"] == 2
     assert rows[0]["positive_share"] == pytest.approx(0.5)
     assert rows[1]["positive_share"] == pytest.approx(0.0)
+
+
+def test_fetch_reviews_passes_the_window_to_the_endpoint_as_epochs():
+    """Steam seeks to the window itself; without this the pull pages back from today."""
+    captured = {}
+
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+        captured["start_date"] = start_date
+        captured["end_date"] = end_date
+        return {"reviews": [], "cursor": None}
+
+    since = datetime(2024, 1, 25, tzinfo=timezone.utc)
+    until = datetime(2024, 8, 8, tzinfo=timezone.utc)
+    steam_fetch.fetch_reviews(553850, since=since, until=until, page_fetcher=fetch)
+
+    assert captured["start_date"] == int(since.timestamp())
+    assert captured["end_date"] == int(until.timestamp())
+
+
+def test_fetch_reviews_sends_no_date_bounds_when_the_window_is_open():
+    captured = {}
+
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+        captured["start_date"] = start_date
+        return {"reviews": [], "cursor": None}
+
+    steam_fetch.fetch_reviews(553850, page_fetcher=fetch)
+
+    assert captured["start_date"] is None
+
+
+def test_cache_path_separates_identical_cursors_under_different_windows():
+    """A cursor means different things under different date bounds — same key would poison the cache."""
+    same_cursor = "AoJw+7Xz1PYCf7ay1g4=="
+
+    a = steam_fetch._cache_path(553850, same_cursor, 1704067200, 1717200000)
+    b = steam_fetch._cache_path(553850, same_cursor, 1717200000, 1730000000)
+    unbounded = steam_fetch._cache_path(553850, same_cursor)
+
+    assert len({a, b, unbounded}) == 3
 
 
 def test_cache_path_is_filesystem_safe_and_cursor_specific():
