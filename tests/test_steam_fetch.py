@@ -38,7 +38,7 @@ def _pager(pages):
     """Fake page_fetcher: serves the given pages in order, keyed by cursor."""
     calls = {"count": 0}
 
-    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         index = calls["count"]
         calls["count"] += 1
         if index >= len(pages):
@@ -89,7 +89,7 @@ def test_fetch_reviews_stops_when_the_cursor_repeats():
     """Steam can hand back the same cursor forever instead of an empty page."""
     stuck = {"reviews": [_raw(1, 2025, 5, 3)], "cursor": "same"}
 
-    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         return stuck
 
     reviews = steam_fetch.fetch_reviews(123, page_fetcher=fetch)
@@ -165,7 +165,7 @@ def test_fetch_reviews_passes_the_window_to_the_endpoint_as_epochs():
     """Steam seeks to the window itself; without this the pull pages back from today."""
     captured = {}
 
-    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         captured["start_date"] = start_date
         captured["end_date"] = end_date
         return {"reviews": [], "cursor": None}
@@ -181,7 +181,7 @@ def test_fetch_reviews_passes_the_window_to_the_endpoint_as_epochs():
 def test_fetch_reviews_sends_no_date_bounds_when_the_window_is_open():
     captured = {}
 
-    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def fetch(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         captured["start_date"] = start_date
         return {"reviews": [], "cursor": None}
 
@@ -247,7 +247,7 @@ def test_fetch_window_chunked_deduplicates_across_chunk_boundaries():
     def counts(appid, since, until):
         return 100_000 if (until - since).days > 20 else 10
 
-    def pager(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         if cursor == "*":
             return {"reviews": [boundary], "cursor": "c2"}
         return {"reviews": [], "cursor": None}
@@ -274,7 +274,7 @@ def _many_chunk_setup():
         span = (until - since) / (window_end - window_start)
         return int(320_000 * span)
 
-    def pager(appid, cursor="*", session=None, start_date=None, end_date=None):
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
         if cursor != "*":
             return {"reviews": [], "cursor": None}
         # One review per chunk, timestamped just inside that chunk so the window
@@ -319,6 +319,75 @@ def test_concurrent_pull_reports_every_chunk_exactly_once():
 
     assert sorted(seen) == sorted(c["chunk"] for c in coverage)
     assert len(seen) == len(set(seen)), "a chunk was reported twice"
+
+
+def test_a_truncated_chunk_is_retried_until_it_matches_the_expected_count():
+    """Steam serves an occasional empty page mid-sequence; that reads as a clean end."""
+    # Realistic scale: the shortfall tolerance has a small absolute floor, so a
+    # handful of reviews would count as within tolerance and never retry.
+    full = [_raw(i, 2024, 1, 15) for i in range(1, 2001)]
+    state = {"attempt": 0}
+
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
+        if cursor == "*":
+            state["attempt"] += 1
+            # First attempt truncates at 500; later attempts serve the lot.
+            serve = full[:500] if state["attempt"] == 1 else full
+            return {"reviews": serve, "cursor": "c2"}
+        return {"reviews": [], "cursor": None}
+
+    reviews, coverage = steam_fetch.fetch_window_chunked(
+        1,
+        datetime(2024, 1, 1, tzinfo=timezone.utc),
+        datetime(2024, 2, 1, tzinfo=timezone.utc),
+        page_fetcher=pager,
+        counter=lambda appid, since, until: 2_000,
+        max_workers=1,
+    )
+
+    assert len(reviews) == 2_000, "the retry should have recovered the truncated chunk"
+    assert coverage[0]["attempts"] == 2
+
+
+def test_retries_bypass_the_cache():
+    """Without refresh, a retry replays the cached dud response and changes nothing."""
+    seen_refresh = []
+
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
+        seen_refresh.append(refresh)
+        return {"reviews": [_raw(1, 2024, 1, 15)] if cursor == "*" else [], "cursor": "c2" if cursor == "*" else None}
+
+    steam_fetch.fetch_window_chunked(
+        1,
+        datetime(2024, 1, 1, tzinfo=timezone.utc),
+        datetime(2024, 2, 1, tzinfo=timezone.utc),
+        page_fetcher=pager,
+        counter=lambda appid, since, until: 5_000,  # never satisfiable, forces all retries
+        max_workers=1,
+    )
+
+    assert seen_refresh[0] is False, "first attempt should use the cache"
+    assert any(seen_refresh), "retries must bypass the cache"
+    assert seen_refresh[-1] is True
+
+
+def test_a_chunk_within_tolerance_is_not_retried():
+    """Reviews deleted between the count probe and the fetch are normal, not a failure."""
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None, refresh=False):
+        if cursor == "*":
+            return {"reviews": [_raw(i, 2024, 1, 15) for i in range(1, 100)], "cursor": "c2"}
+        return {"reviews": [], "cursor": None}
+
+    _, coverage = steam_fetch.fetch_window_chunked(
+        1,
+        datetime(2024, 1, 1, tzinfo=timezone.utc),
+        datetime(2024, 2, 1, tzinfo=timezone.utc),
+        page_fetcher=pager,
+        counter=lambda appid, since, until: 100,
+        max_workers=1,
+    )
+
+    assert coverage[0]["attempts"] == 1
 
 
 def test_cache_path_separates_identical_cursors_under_different_windows():

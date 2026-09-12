@@ -99,3 +99,12 @@ MAX_CHUNK_SPLIT_DEPTH = 12
 # rate near 3-4 requests/second. Measured sequentially at ~50 pages/min, which
 # made the 8,601-page pull a ~3 hour job.
 MAX_CONCURRENT_CHUNKS = 4
+
+# Steam intermittently serves an empty page mid-sequence, which reads as a clean
+# end-of-listing. Measured 2026-09-13: with 4 workers, 2 of 24 chunks came back
+# 12.7% and 62% short while the single largest chunk (38,262 reviews) completed
+# fine — so this is transient, not the pagination depth limit. Because the dud
+# response gets cached like any other, a plain re-run replays the truncation;
+# retries must bypass the cache.
+CHUNK_SHORTFALL_TOLERANCE = 0.002  # deletions between count and fetch run ~0.03%
+MAX_CHUNK_RETRIES = 3

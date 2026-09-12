@@ -81,10 +81,15 @@ def fetch_page(
     session: requests.Session | None = None,
     start_date: int | None = None,
     end_date: int | None = None,
+    refresh: bool = False,
 ) -> dict:
-    """One page of reviews. Cached on disk by (appid, cursor, date range); a hit makes no request."""
+    """One page of reviews. Cached on disk by (appid, cursor, date range); a hit makes no request.
+
+    `refresh` re-fetches and overwrites the cached copy. Needed because a truncated
+    pull caches the dud response that truncated it, so retrying without it is a no-op.
+    """
     path = _cache_path(appid, cursor, start_date, end_date)
-    if path.exists():
+    if path.exists() and not refresh:
         return json.loads(path.read_text(encoding="utf-8"))
 
     params = {
@@ -142,6 +147,7 @@ def fetch_reviews(
     session: requests.Session | None = None,
     page_fetcher=fetch_page,
     on_page=None,
+    refresh: bool = False,
 ) -> list[dict]:
     """All reviews for appid, newest first, optionally bounded to [since, until].
 
@@ -163,7 +169,12 @@ def fetch_reviews(
         seen_cursors.add(cursor)
 
         payload = page_fetcher(
-            appid, cursor, session=session, start_date=start_epoch, end_date=end_epoch
+            appid,
+            cursor,
+            session=session,
+            start_date=start_epoch,
+            end_date=end_epoch,
+            refresh=refresh,
         )
         if on_page is not None:
             on_page(payload)
@@ -359,15 +370,29 @@ def fetch_window_chunked(
                 thread_state.session = requests.Session()
             worker_session = thread_state.session
 
-        chunk_reviews = fetch_reviews(
-            appid,
-            since=chunk_since,
-            until=chunk_until,
-            session=worker_session,
-            page_fetcher=page_fetcher,
-            on_page=on_page,
-        )
-        return index, chunk_since, chunk_until, expected, chunk_reviews
+        tolerance = max(10, int(expected * config.CHUNK_SHORTFALL_TOLERANCE))
+        best: list[dict] = []
+        attempts = 0
+
+        for attempt in range(config.MAX_CHUNK_RETRIES + 1):
+            attempts = attempt + 1
+            chunk_reviews = fetch_reviews(
+                appid,
+                since=chunk_since,
+                until=chunk_until,
+                session=worker_session,
+                page_fetcher=page_fetcher,
+                on_page=on_page,
+                # A truncated attempt cached the response that truncated it, so every
+                # retry has to bypass the cache or it reproduces the same shortfall.
+                refresh=attempt > 0,
+            )
+            if len(chunk_reviews) > len(best):
+                best = chunk_reviews
+            if expected - len(best) <= tolerance:
+                break
+
+        return index, chunk_since, chunk_until, expected, best, attempts
 
     indexed = list(enumerate(chunks, start=1))
     if workers <= 1:
@@ -387,6 +412,7 @@ def fetch_window_chunked(
                             "until": result[2],
                             "expected": result[3],
                             "fetched": len(result[4]),
+                            "attempts": result[5],
                             "new": None,  # not yet merged; filled in below
                         }
                     )
@@ -395,7 +421,9 @@ def fetch_window_chunked(
     seen_ids: set[str] = set()
     coverage: list[dict] = []
 
-    for index, chunk_since, chunk_until, expected, chunk_reviews in sorted(results, key=lambda r: r[0]):
+    for index, chunk_since, chunk_until, expected, chunk_reviews, attempts in sorted(
+        results, key=lambda r: r[0]
+    ):
         new = 0
         for review in chunk_reviews:
             if review["recommendationid"] in seen_ids:
@@ -410,6 +438,7 @@ def fetch_window_chunked(
             "until": chunk_until,
             "expected": expected,
             "fetched": len(chunk_reviews),
+            "attempts": attempts,
             "new": new,
         }
         coverage.append(row)
