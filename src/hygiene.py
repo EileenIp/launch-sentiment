@@ -125,5 +125,62 @@ def scan(appid: int | None = None, top_n: int = 12) -> DuplicateReport:
     return report
 
 
+def both_ways(appid: int | None = None) -> list[dict]:
+    """Weekly thumbs-up share counted every review vs counted each distinct text once.
+
+    The spec requires the key moment shown both ways whatever the copypasta call is.
+    "Collapsed" is the strongest possible version of down-weighting — every repeated
+    text contributes exactly one vote — so it brackets the effect rather than
+    estimating it.
+    """
+    appid = appid or config.TARGET_APPID
+
+    raw_counts: defaultdict = defaultdict(lambda: {"n": 0, "up": 0})
+    seen: defaultdict = defaultdict(dict)
+
+    for review in iter_raw_reviews(appid):
+        week = week_of(review["timestamp_created"])
+        up = bool(review["voted_up"])
+        raw_counts[week]["n"] += 1
+        raw_counts[week]["up"] += int(up)
+
+        text = normalise(review.get("review", ""))
+        if not text:
+            continue
+        # First occurrence of a text within a week is the one that counts.
+        seen[week].setdefault(text, up)
+
+    rows = []
+    for week in sorted(raw_counts):
+        raw = raw_counts[week]
+        collapsed = seen[week]
+        collapsed_n = len(collapsed)
+        collapsed_up = sum(1 for up in collapsed.values() if up)
+        rows.append(
+            {
+                "week": week,
+                "reviews": raw["n"],
+                "raw_positive": raw["up"] / raw["n"] if raw["n"] else 0.0,
+                "distinct": collapsed_n,
+                "collapsed_positive": collapsed_up / collapsed_n if collapsed_n else 0.0,
+            }
+        )
+    return rows
+
+
+def print_both_ways(rows: list[dict]) -> None:
+    print("\n=== weekly thumbs-up share, both ways ===")
+    print("  week      reviews   every review   distinct texts   collapsed   delta")
+    for row in rows:
+        delta = row["collapsed_positive"] - row["raw_positive"]
+        print(
+            f"  {row['week']}  {row['reviews']:>8,}  {row['raw_positive']:>11.1%}  "
+            f"{row['distinct']:>14,}  {row['collapsed_positive']:>10.1%}  {delta:>+6.1f}pp".replace(
+                f"{delta:>+6.1f}pp", f"{delta * 100:>+5.1f}pp"
+            )
+        )
+
+
 if __name__ == "__main__":
     scan().print_report()
+    print_both_ways(both_ways())

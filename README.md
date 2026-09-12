@@ -55,6 +55,52 @@ as clearly as the event. A second, smaller dip appears in W32 on low volume.
 These are counts and Steam's own thumbs-up flag, not sentiment analysis. No claim
 about *why* anything moved belongs here until Phases 2–4 have run.
 
+## The copypasta question, answered both ways
+
+A review-bomb is supposed to be inflated by mass-pasted identical reviews. In this
+corpus it isn't.
+
+**W18, the spike week, is the least duplicated week in the window** — 20.7% repeated
+text against a 28–30% baseline. The most-repeated texts are positive community memes,
+not coordinated anger:
+
+| Text (W18) | Count | Positive |
+|---|---|---|
+| `for democracy` | 1,321 | 96% |
+| `we won` | 692 | 100% |
+| `democracy has prevailed` | 485 | 100% |
+| `sony` | 1,212 | 26% |
+| `psn` | 837 | 11% |
+
+`sony` and `psn` are the only clearly campaign-related repeats — 0.8% of the week.
+Meanwhile `we won` and `democracy has prevailed` are absent from every baseline week:
+the reversal is being celebrated inside the same week as the bomb.
+
+So rather than argue about weighting, here is the effect measured. "Collapsed" counts
+each distinct text once per week — the strongest possible down-weighting, which
+brackets the effect instead of estimating it:
+
+| Week | Reviews | Every review | Collapsed | Delta |
+|---|---|---|---|---|
+| W15 | 17,494 | 85.5% | 82.6% | −3.0pp |
+| W16 | 13,046 | 84.7% | 81.7% | −2.9pp |
+| W17 | 9,529 | 85.3% | 82.8% | −2.5pp |
+| **W18** | **258,530** | **58.5%** | **56.4%** | **−2.1pp** |
+| W19 | 152,153 | 83.8% | 81.7% | −2.1pp |
+
+Every week moves down, because repeated text is disproportionately positive. W18 moves
+*least*. The W18-versus-baseline gap goes from 26.7pp to 26.0pp — a **0.7pp** change to
+the thing the project actually claims.
+
+The copypasta decision does not change any conclusion here, and that is a more useful
+answer than picking a side would have been.
+
+Two limits on that claim: detection is exact match after normalisation, so templated
+variation ("Sony ruined this" / "sony killed it") is invisible to it — identical-text
+copypasta wasn't the mechanism, which is not the same as saying nothing was coordinated.
+And 27.5% of all reviews are three words or fewer, so much of the ~28% baseline is short
+generic text ("good", "fun") colliding by chance rather than anyone pasting anything.
+
 ## What didn't work
 
 Two failures worth keeping, both caught only by checking totals against an

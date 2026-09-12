@@ -64,10 +64,33 @@ KEEP_NON_STEAM_PURCHASES = True
 # key moment BOTH ways, weighted and unweighted, so a reader can see how much of
 # W18's collapse is coordination and how much is distinct people.
 #
-# The weighting scheme itself is set once detection has run — picking a number
-# before knowing whether copypasta is 2% or 40% of the spike would be arbitrary.
-DOWNWEIGHT_COPYPASTA = True
-COPYPASTA_WEIGHT: float | None = None  # set at Checkpoint 1, with real numbers in hand
+# REVISED after detection ran, 2026-09-13. Eileen delegated the revised call to
+# the agent ("your choice"), so this one is the AGENT'S judgement, not hers —
+# flagged explicitly because the spec marks this as an interview question whose
+# answer is supposed to be hers. Overruling it costs nothing: set both back.
+#
+# Down-weighting is NOT applied, because the evidence contradicts the premise:
+#
+#   - W18, the spike week, is the LEAST duplicated week in the window: 20.7%
+#     repeated text against a 28-30% baseline in ordinary weeks.
+#   - The largest repeated texts are positive community memes ("for democracy",
+#     11,851 corpus-wide, 96% positive in W18), not coordinated negativity. The
+#     only clearly campaign-related repeats in W18 are "sony" (1,212, 26%
+#     positive) and "psn" (837, 11% positive) — together 0.8% of the week.
+#   - "we won" / "democracy prevails" / "democracy has prevailed" appear in the
+#     thousands at 100% positive inside W18 and are absent from baseline weeks:
+#     the reversal is being celebrated in the same week as the bomb.
+#
+# So down-weighting would strip more positive weight than negative from the very
+# week it was meant to correct.
+#
+# Measured, rather than argued (see hygiene.both_ways): collapsing every repeated
+# text to a single vote moves EVERY week down 1.8-4.9pp, and moves W18 down least
+# of all (-2.1pp). The W18-vs-baseline gap goes from 26.7pp to 26.0pp. The
+# decision changes no conclusion, which is the honest answer to the interview
+# question and a stronger one than either weighting scheme.
+DOWNWEIGHT_COPYPASTA = False
+COPYPASTA_WEIGHT: float | None = None
 
 # --- Steam API ---
 #
