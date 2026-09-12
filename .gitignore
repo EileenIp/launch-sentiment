@@ -10,3 +10,5 @@ venv/
 *.egg-info/
 .DS_Store
 *.log
+vader_run.log
+transformer_run.log
