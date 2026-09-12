@@ -92,3 +92,10 @@ SAFE_CHUNK_REVIEWS = 40_000
 # Guard against pathological recursion if a single day somehow exceeds the chunk
 # size — at that point the chunk is taken as-is and the coverage check reports it.
 MAX_CHUNK_SPLIT_DEPTH = 12
+
+# Chunks have independent cursor sequences, so they can be fetched concurrently;
+# pages *within* a chunk cannot, since each cursor comes from the previous page.
+# 4 workers each pausing REQUEST_DELAY_SECONDS between pages puts the aggregate
+# rate near 3-4 requests/second. Measured sequentially at ~50 pages/min, which
+# made the 8,601-page pull a ~3 hour job.
+MAX_CONCURRENT_CHUNKS = 4

@@ -19,7 +19,9 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -330,23 +332,70 @@ def fetch_window_chunked(
     counter=count_reviews,
     on_page=None,
     on_chunk=None,
+    max_workers: int | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    """Pull a whole window via chunks. Returns (reviews, per-chunk coverage rows)."""
+    """Pull a whole window via chunks, fetched concurrently. Returns (reviews, coverage rows).
+
+    Chunks run in parallel because each owns an independent cursor sequence. Pages
+    within a chunk stay sequential — a page's cursor only exists once the previous
+    page has been read.
+
+    Results are merged in chunk order rather than completion order, so the corpus is
+    byte-identical whatever the workers happen to do. `max_workers=1` runs inline,
+    which keeps tests deterministic.
+    """
     chunks = plan_chunks(appid, since, until, counter=counter)
+    workers = max_workers if max_workers is not None else config.MAX_CONCURRENT_CHUNKS
+
+    thread_state = threading.local()
+
+    def pull_one(indexed_chunk):
+        index, (chunk_since, chunk_until, expected) = indexed_chunk
+        # requests.Session is not documented as thread-safe; give each worker its own.
+        if session is not None:
+            worker_session = session
+        else:
+            if not hasattr(thread_state, "session"):
+                thread_state.session = requests.Session()
+            worker_session = thread_state.session
+
+        chunk_reviews = fetch_reviews(
+            appid,
+            since=chunk_since,
+            until=chunk_until,
+            session=worker_session,
+            page_fetcher=page_fetcher,
+            on_page=on_page,
+        )
+        return index, chunk_since, chunk_until, expected, chunk_reviews
+
+    indexed = list(enumerate(chunks, start=1))
+    if workers <= 1:
+        results = [pull_one(item) for item in indexed]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(pull_one, item) for item in indexed]
+            results = []
+            for future in as_completed(futures):
+                result = future.result()
+                results.append(result)
+                if on_chunk is not None:
+                    on_chunk(
+                        {
+                            "chunk": result[0],
+                            "since": result[1],
+                            "until": result[2],
+                            "expected": result[3],
+                            "fetched": len(result[4]),
+                            "new": None,  # not yet merged; filled in below
+                        }
+                    )
 
     collected: list[dict] = []
     seen_ids: set[str] = set()
     coverage: list[dict] = []
 
-    for index, (chunk_since, chunk_until, expected) in enumerate(chunks, start=1):
-        chunk_reviews = fetch_reviews(
-            appid,
-            since=chunk_since,
-            until=chunk_until,
-            session=session,
-            page_fetcher=page_fetcher,
-            on_page=on_page,
-        )
+    for index, chunk_since, chunk_until, expected, chunk_reviews in sorted(results, key=lambda r: r[0]):
         new = 0
         for review in chunk_reviews:
             if review["recommendationid"] in seen_ids:
@@ -364,7 +413,7 @@ def fetch_window_chunked(
             "new": new,
         }
         coverage.append(row)
-        if on_chunk is not None:
+        if workers <= 1 and on_chunk is not None:
             on_chunk(row)
 
     return collected, coverage

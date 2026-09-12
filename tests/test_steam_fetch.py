@@ -265,6 +265,62 @@ def test_fetch_window_chunked_deduplicates_across_chunk_boundaries():
     assert sum(row["new"] for row in coverage) == 1
 
 
+def _many_chunk_setup():
+    """A window that bisects into several chunks, each serving one identifiable review."""
+    window_start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    window_end = datetime(2024, 2, 1, tzinfo=timezone.utc)
+
+    def counts(appid, since, until):
+        span = (until - since) / (window_end - window_start)
+        return int(320_000 * span)
+
+    def pager(appid, cursor="*", session=None, start_date=None, end_date=None):
+        if cursor != "*":
+            return {"reviews": [], "cursor": None}
+        # One review per chunk, timestamped just inside that chunk so the window
+        # filter keeps it, and identified by the chunk it came from.
+        review = _raw(start_date, 2024, 1, 15)
+        review["timestamp_created"] = start_date + 1
+        review["timestamp_updated"] = start_date + 1
+        return {"reviews": [review], "cursor": "c2"}
+
+    return window_start, window_end, counts, pager
+
+
+def test_concurrent_and_sequential_pulls_return_identical_corpora():
+    """Merging by chunk order, not completion order, is what makes the pull reproducible."""
+    start, end, counts, pager = _many_chunk_setup()
+
+    serial, serial_cov = steam_fetch.fetch_window_chunked(
+        1, start, end, page_fetcher=pager, counter=counts, max_workers=1
+    )
+    parallel, parallel_cov = steam_fetch.fetch_window_chunked(
+        1, start, end, page_fetcher=pager, counter=counts, max_workers=8
+    )
+
+    assert len(serial) > 1, "window should have split into several chunks"
+    assert [r["recommendationid"] for r in serial] == [r["recommendationid"] for r in parallel]
+    assert [c["chunk"] for c in parallel_cov] == sorted(c["chunk"] for c in parallel_cov)
+    assert [c["fetched"] for c in serial_cov] == [c["fetched"] for c in parallel_cov]
+
+
+def test_concurrent_pull_reports_every_chunk_exactly_once():
+    start, end, counts, pager = _many_chunk_setup()
+    seen = []
+    guard = __import__("threading").Lock()
+
+    def on_chunk(row):
+        with guard:
+            seen.append(row["chunk"])
+
+    _, coverage = steam_fetch.fetch_window_chunked(
+        1, start, end, page_fetcher=pager, counter=counts, on_chunk=on_chunk, max_workers=8
+    )
+
+    assert sorted(seen) == sorted(c["chunk"] for c in coverage)
+    assert len(seen) == len(set(seen)), "a chunk was reported twice"
+
+
 def test_cache_path_separates_identical_cursors_under_different_windows():
     """A cursor means different things under different date bounds — same key would poison the cache."""
     same_cursor = "AoJw+7Xz1PYCf7ay1g4=="

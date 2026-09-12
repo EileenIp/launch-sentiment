@@ -9,6 +9,7 @@ Run: python -m src.pull_window
 from __future__ import annotations
 
 import json
+import threading
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -127,18 +128,25 @@ def run(appid: int | None = None, launch_date: str | None = None) -> list[dict]:
     since, until = steam_fetch.window_for_launch(launch_date)
     print(f"appid {appid}: pulling [{since.date()} .. {until.date()}]")
 
-    pages = {"n": 0}
+    pages = {"n": 0, "chunks": 0}
+    # Workers call these concurrently.
+    lock = threading.Lock()
 
     def progress(payload):
-        pages["n"] += 1
-        if pages["n"] % 50 == 0:
-            print(f"  {pages['n']} pages...", flush=True)
+        with lock:
+            pages["n"] += 1
+            current = pages["n"]
+        if current % 250 == 0:
+            print(f"  {current} pages...", flush=True)
 
     def chunk_done(row):
         gap = row["expected"] - row["fetched"]
         flag = "" if abs(gap) <= max(5, row["expected"] * 0.001) else f"  <-- SHORT BY {gap:,}"
+        with lock:
+            pages["chunks"] += 1
+            done = pages["chunks"]
         print(
-            f"  chunk {row['chunk']}: {row['since'].date()}..{row['until'].date()} "
+            f"  [{done}] chunk {row['chunk']}: {row['since'].date()}..{row['until'].date()} "
             f"expected {row['expected']:,} got {row['fetched']:,}{flag}",
             flush=True,
         )
