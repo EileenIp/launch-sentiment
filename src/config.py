@@ -56,6 +56,36 @@ POST_LAUNCH_DAYS = 183
 # Reversible: the corpus, scorers and lag analysis are all source-agnostic.
 SOURCES = ("steam",)
 
+# --- Checkpoint 2: the sentiment signal ---
+#
+# EILEEN DECIDES, 2026-09-13: the daily sentiment index is built on Steam's own
+# thumbs-up flag. Neither text scorer is used for sentiment.
+#
+# This reverses the spec's plan, and the reason is measured, not asserted. Against
+# her 200 hand labels:
+#
+#   vader                        61.5%
+#   transformer                  64.0%
+#   always predict "positive"    72.0%   <- both scorers lose to this
+#   Steam's own thumbs-up        95.0%   (on the 181 labelled clearly pos/neg)
+#
+# A scorer that loses to the majority class has no business driving the headline
+# chart, and Steam's flag is human-generated, already attached to every review in
+# the corpus, and closer to Eileen's judgement than either model.
+#
+# Why the models fail here is specific and worth stating: Helldivers players
+# express enthusiasm through violence and self-deprecation ("I got hit by a
+# explosion shot into the air then got stomped on by a robot 10/10", "This game
+# has ruined my chances of getting a girlfriend. 10/10"). General-purpose
+# sentiment models read the words and miss the delight.
+#
+# The text models remain in the repo as the evidence for that finding. The
+# transformer's full-corpus pass was stopped at 103,624 of 630,227 once this was
+# decided — it existed only to produce an index no longer being used, and theme
+# extraction runs on the keyword taxonomy, not the model. The 200 validation
+# scores are what the argument rests on, and those are complete.
+SENTIMENT_SIGNAL = "steam_voted_up"
+
 # --- Phase 1: corpus hygiene decisions ---
 #
 # EILEEN DECIDES, 2026-09-13: reviews where steam_purchase is false stay in.

@@ -101,6 +101,48 @@ copypasta wasn't the mechanism, which is not the same as saying nothing was coor
 And 27.5% of all reviews are three words or fewer, so much of the ~28% baseline is short
 generic text ("good", "fun") colliding by chance rather than anyone pasting anything.
 
+## The scorer validation, and why it changed the project
+
+200 reviews were hand-labelled blind — no scorer output, no Steam thumbs-up visible —
+then compared against both scorers.
+
+| | Agreement with the hand labels |
+|---|---|
+| VADER | 61.5% |
+| Transformer | 64.0% |
+| **"Always say positive"** | **72.0%** |
+| **Steam's own thumbs-up** | **95.0%** (on the 181 labelled clearly positive or negative) |
+
+**Both scorers lose to a classifier that does not read the text.** The label mix is
+144 positive / 37 negative / 19 mixed-neutral, so always guessing "positive" scores
+72%. Quoting "the transformer wins, 64.0% vs 61.5%" without that baseline would be
+a misleading result, not a finding.
+
+They also fail differently. The transformer is far better on negatives (70.3% vs
+45.9%); VADER edges positives (71.5% vs 69.4%). Both collapse on mixed-neutral
+(15.8% and 10.5%) — the class a nuanced daily index would most need.
+
+**Why they fail is specific to this game.** Where both scorers said negative and the
+hand label said positive:
+
+> "I got hit by a explosion shot into the air then got stomped on by a robot 10/10
+> would get hit by my teammate drop pod again"
+> "This game has ruined my chances of getting a girlfriend. 10/10"
+> "Tyranny is a cancer and modern democracy is the cure"
+
+Helldivers players express enthusiasm through violence, self-deprecation and
+in-fiction propaganda. General-purpose sentiment models read the words and miss the
+delight. That is not a tuning problem; it is a register mismatch.
+
+**So the sentiment index is built on Steam's thumbs-up flag instead** — human
+judgement, attached to 100% of the corpus, and closer to the hand labels than either
+model managed. The text scorers stay in the repo as the evidence for this decision,
+not as part of the pipeline.
+
+This is the opposite of what the spec planned, and it is a better outcome than
+following the plan would have been: a measured reason to reject two standard tools
+beats an unexamined reason to adopt one.
+
 ## Complaint themes
 
 Nine themes, 182 seed phrases, applied to the 123,316 negative English reviews.
