@@ -67,6 +67,33 @@ def cross_correlate(theme_series: list[float], score_series: list[float], max_la
     return out
 
 
+def null_distribution(theme_series: list[float], score_series: list[float],
+                      trials: int = 1000, max_lag: int = MAX_LAG_DAYS, seed: int | None = None):
+    """How strong a 'best lag' does chance produce for this pair of series?
+
+    Reporting the most negative correlation across 29 lags means taking the extreme
+    of 29 attempts, which finds something even in noise. This builds the null for
+    exactly that statistic: rotate the theme series by a random offset — preserving
+    its own day-to-day autocorrelation while destroying any real alignment with the
+    score — and record the best lag correlation each time.
+
+    A rotation, not a shuffle: shuffling would destroy the autocorrelation too, which
+    makes the null far too easy to beat and would dress up noise as a finding.
+    """
+    import random
+
+    rng = random.Random(config.RANDOM_SEED if seed is None else seed)
+    n = len(theme_series)
+    best_rs = []
+    for _ in range(trials):
+        offset = rng.randint(max_lag + 1, n - max_lag - 1)
+        rotated = theme_series[offset:] + theme_series[:offset]
+        lags = cross_correlate(rotated, score_series, max_lag)
+        if lags:
+            best_rs.append(min(row["r"] for row in lags))
+    return sorted(best_rs)
+
+
 def analyse(appid: int | None = None, min_reviews: int = MIN_REVIEWS_PER_DAY) -> dict:
     rows = usable_days(timeseries.load(appid)["days"], min_reviews)
     score = [r["positive_share"] for r in rows]
