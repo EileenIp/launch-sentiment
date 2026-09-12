@@ -24,6 +24,12 @@ THEMES = {
         "through terrain", "clipping", "invisible", "doesn't work",
         "does not work", "even work", "unusable", "bricking", "unplayable",
         "literally unplayable", "glitch", "softlock", "disconnect",
+        # Added 2026-09-13. "server" was simply missing, on a game whose launch
+        # was defined by server capacity failures — the single largest gap in the
+        # first taxonomy. "kicked" is the loosest of these: it can mean kicked by
+        # a host rather than dropped by the server.
+        "server", "servers", "server issues", "matchmaking", "cannot connect",
+        "can't connect", "kicked", "desync", "lost progress",
     ],
     "performance": [
         "unoptimized", "unoptimised", "optimization", "optimisation",
@@ -45,6 +51,12 @@ THEMES = {
         "fun anymore", "unfun", "used fun", "chore", "slog", "repetitive",
         "game dead", "dumpster", "game trash", "game sucks", "disappointment",
         "boring", "stale", "content drought",
+        # Added 2026-09-13. REVISIT "grind"/"grindy": in this game grinding is
+        # usually for Super Credits, which makes it arguably a monetisation
+        # complaint. Multi-label softens the problem — a review mentioning both
+        # grind and warbonds picks up both themes rather than the wrong one —
+        # but if monetisation volume looks thin, this is the first place to look.
+        "aiming", "vaulting", "clunky", "grind", "grindy", "tedious",
     ],
     # Added by Eileen 2026-09-13 — the largest cluster the spec's six had no home for.
     "balance": [
