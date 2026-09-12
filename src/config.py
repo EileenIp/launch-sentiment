@@ -37,6 +37,23 @@ TARGET_LAUNCH_DATE: str | None = "2024-02-08"  # store release date, confirmed v
 PRE_LAUNCH_DAYS = 14
 POST_LAUNCH_DAYS = 183
 
+# --- Phase 1: corpus hygiene decisions ---
+#
+# EILEEN DECIDES, 2026-09-13: reviews where steam_purchase is false stay in.
+#
+# They are 218,449 of 834,605 in the first full pull — 26.2%, far too large a
+# slice to drop silently. The context that makes keeping them defensible: the May
+# 2024 sentiment event was about an account-linking requirement, so players who
+# did not buy through Steam are plausibly part of the story rather than noise
+# around it. Excluding them would be quietly excluding a group with a specific
+# reason to be angry.
+#
+# What this obliges the write-up to do: state the 26.2% share openly, and if
+# including them materially changes a headline number, show it both ways rather
+# than only the version that was kept. Same discipline the spec demands for the
+# copypasta call.
+KEEP_NON_STEAM_PURCHASES = True
+
 # --- Steam API ---
 #
 # The public appreviews endpoint. No key, no auth, no quota published by Valve.
