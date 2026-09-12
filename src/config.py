@@ -35,7 +35,26 @@ TARGET_LAUNCH_DATE: str | None = "2024-02-08"  # store release date, confirmed v
 # launch to catch any early-access run-up, six months after to cover the full
 # arc including patch-driven recovery.
 PRE_LAUNCH_DAYS = 14
-POST_LAUNCH_DAYS = 183
+
+# EXTENDED from the spec's 183 days (six months) to 271, on Eileen's call
+# 2026-09-13, after the first lag analysis.
+#
+# The six-month window closed on 2024-08-09. The August nerf controversy — the one
+# sentiment event in this corpus that could plausibly have built gradually, and so
+# the only fair test of the leading-indicator claim — began on 2024-08-06 and was
+# still deepening on the last day in the window. Judging the project's central
+# claim on three days of a truncated event would have been a null by accident of
+# the window rather than a null in the data.
+#
+# 271 days runs to 2024-11-05, covering the nerf patch, the September rebalance
+# that followed it, and October's return to baseline. Stops short of December's
+# content update, which is a separate era and a separate event.
+#
+# Cost of the extension: 26,832 reviews, pulled as their own range rather than by
+# re-running with a later end date — chunk boundaries derive from the window, so a
+# wider window re-plans every chunk and re-fetches all 8,600 pages to gain a few
+# hundred. See pull_window.extend.
+POST_LAUNCH_DAYS = 271
 
 # --- Scope ---
 #

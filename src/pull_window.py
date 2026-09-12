@@ -12,7 +12,7 @@ import json
 import threading
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src import config, steam_fetch
 
@@ -117,6 +117,39 @@ def check_integrity(reviews: list[dict], since: datetime, until: datetime) -> In
         report.modal_gap_share = count / (len(created) - 1)
 
     return report
+
+
+def extend(since: datetime, until: datetime, appid: int | None = None) -> dict:
+    """Fetch an extra date range and append it to the saved corpus.
+
+    Pulled as its own window rather than by re-running the whole thing with a later
+    end date: chunk boundaries are derived from the window, so a wider window
+    re-plans every chunk, changes every cache key, and re-fetches all 8,600 pages
+    to gain a few hundred.
+    """
+    appid = appid or config.TARGET_APPID
+    existing = load_reviews(appid)
+    known = {r["recommendationid"] for r in existing}
+    expected = steam_fetch.count_reviews(appid, since, until)
+    print(f"extending {since.date()}..{until.date()}: Steam reports {expected:,} reviews")
+
+    fetched, coverage = steam_fetch.fetch_window_chunked(
+        appid, since, until,
+        on_chunk=lambda row: print(
+            f"  chunk {row['chunk']}: {row['since'].date()}..{row['until'].date()} "
+            f"expected {row['expected']:,} got {row['fetched']:,}", flush=True),
+    )
+    new = [r for r in fetched if r["recommendationid"] not in known]
+    combined = existing + new
+    combined.sort(key=lambda r: r["timestamp_created"])
+    save_reviews(combined, appid)
+
+    ratio = len(fetched) / expected if expected else 0.0
+    print(f"fetched {len(fetched):,} ({ratio:.1%} of expected), {len(new):,} new")
+    print(f"corpus now {len(combined):,} reviews")
+    if ratio < 0.95:
+        print("  WARNING: coverage below 95% — investigate before analysing")
+    return {"expected": expected, "fetched": len(fetched), "new": len(new), "total": len(combined)}
 
 
 def run(appid: int | None = None, launch_date: str | None = None) -> list[dict]:
