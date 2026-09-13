@@ -3,9 +3,11 @@
 AUTHORSHIP NOTE. The spec reserves Limitations, "What didn't work" and the monitoring
 recommendation for Eileen, because they are the sections an interviewer probes hardest.
 She asked the agent to draft them on 2026-09-13. They are the agent's words EXCEPT the
-opening of Limitations, which is hers: she identified the binary thumbs-up as the
-limitation she would raise first, and confirmed "direction, not measurement" as how far
-she would trust the daily share. That paragraph should be left as written.
+opening of Limitations and the "blunt signal" paragraph in the Recommendation, both of
+which are hers: she identified the binary thumbs-up as the limitation she would raise
+first, confirmed "direction, not measurement" as how far she would trust the daily
+share, and answered the obvious objection to the threshold with "a 12-point drop is
+still a 12-point drop". Those two paragraphs should be left as written.
 Every other claim is traceable to a number this project actually produced --
 the validation figures, the truncation coverage, the threshold table -- and the
 threshold recommendation was derived by testing rules against the data rather than
@@ -223,6 +225,12 @@ daily positive share** fired exactly three times in nine months:
 Two events, three alerts, **no false alarms**. The same rule at 10 points adds four
 alerts that were not events; at 20 points it misses the August event entirely.
 
+**Why the blunt signal does not undermine this.** The thumbs-up is binary, and I said
+above that I treat the daily share as a direction rather than a measurement. That is an
+argument about levels, and this is a rule about change. A 12-point drop is still a
+12-point drop. The flag is exactly as blunt the day before as the day after, so what it
+misses does not move between them.
+
 **When it trips, read the theme mix, not the reviews.** That is what this pipeline is
 actually for. On 3 May the mix moved from 21% to 57% Sony/PSN while balance complaints
 *fell*; on 6 August balance went 0% to 46% while Sony/PSN stayed flat at 3%. In both
@@ -311,6 +319,7 @@ def build_deck(s: dict):
            "A 12-point single-day drop fired 3 times in 9 months, with no false alarms",
            "3 May (PSN announcement), 6-7 Aug (balance patch) — both events, nothing else",
            "When it trips, read the theme mix, not the reviews: the cause is named within hours",
+           "The thumbs-up is blunt, but that is about levels — a 12-point drop is still a 12-point drop",
            "Do not expect warning — both events were the studio's own announcements"])
 
     OUT.mkdir(parents=True, exist_ok=True)

@@ -165,6 +165,12 @@ daily positive share** fired exactly three times in nine months:
 Two events, three alerts, **no false alarms**. The same rule at 10 points adds four
 alerts that were not events; at 20 points it misses the August event entirely.
 
+**Why the blunt signal does not undermine this.** The thumbs-up is binary, and I said
+above that I treat the daily share as a direction rather than a measurement. That is an
+argument about levels, and this is a rule about change. A 12-point drop is still a
+12-point drop. The flag is exactly as blunt the day before as the day after, so what it
+misses does not move between them.
+
 **When it trips, read the theme mix, not the reviews.** That is what this pipeline is
 actually for. On 3 May the mix moved from 21% to 57% Sony/PSN while balance complaints
 *fell*; on 6 August balance went 0% to 46% while Sony/PSN stayed flat at 3%. In both
