@@ -12,3 +12,4 @@ venv/
 *.log
 vader_run.log
 transformer_run.log
+theme_stats.json
