@@ -2,8 +2,11 @@
 
 AUTHORSHIP NOTE. The spec reserves Limitations, "What didn't work" and the monitoring
 recommendation for Eileen, because they are the sections an interviewer probes hardest.
-She asked the agent to draft them on 2026-09-13 and they are the agent's words, not
-hers. Every claim in them is traceable to a number this project actually produced --
+She asked the agent to draft them on 2026-09-13. They are the agent's words EXCEPT the
+opening of Limitations, which is hers: she identified the binary thumbs-up as the
+limitation she would raise first, and confirmed "direction, not measurement" as how far
+she would trust the daily share. That paragraph should be left as written.
+Every other claim is traceable to a number this project actually produced --
 the validation figures, the truncation coverage, the threshold table -- and the
 threshold recommendation was derived by testing rules against the data rather than
 asserted. She should still read them as drafts and make them her own before defending
@@ -135,15 +138,18 @@ leads in seven of eight themes, up to twelve days.
 
 ## Limitations
 
+**The thumbs-up is binary, and that is the limitation I would raise first.** Steam gives
+one bit per review, so "great game, terrible servers" is recorded exactly the same as
+"perfect". When I hand-labelled {s['labels']} reviews, 19 were genuinely mixed — and
+Steam had 17 of those as positive. Roughly one in ten of the sample is flattened into a
+category it does not belong in. It is why I treat the daily positive share as a
+direction, not a measurement: the shape of the collapses is real, but I would not defend
+the exact level of any single day.
+
 **Steam reviewers self-select.** This measures people moved enough to write something,
 not players. Both events here were the kind that motivate writing — an account
 requirement and a balance change — so the corpus is probably closer to "engaged and
 annoyed" than to the playerbase.
-
-**Sentiment is a thumbs-up, not a measurement.** Steam's flag is binary, so a review
-saying "great game, terrible servers" counts identically to one saying "perfect". The
-{s['labels']} hand-labelled reviews included 19 that were genuinely mixed, and the flag
-cannot represent them. This understates ambivalence throughout.
 
 **Two standard sentiment tools were tested and rejected.** VADER agreed with the hand
 labels 61.5% of the time and a RoBERTa sentiment model 64.0%, against a 72.0%

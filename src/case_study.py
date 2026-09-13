@@ -115,6 +115,12 @@ def entry() -> dict:
             "whether complaint themes give early warning of a score collapse — and finding they don't."
         ),
         "targetIndustryRole": "Gaming / community and live-ops teams monitoring launch sentiment",
+        "links": {
+            "dashboard": "https://eileenip.github.io/launch-sentiment/dashboard/",
+            "technicalFindings": "https://github.com/EileenIp/launch-sentiment/blob/main/deliverables/launch-sentiment-report.md",
+            "notebookRepo": "https://github.com/EileenIp/launch-sentiment",
+            "caseStudyPage": "https://github.com/EileenIp/launch-sentiment#readme",
+        },
         "summaryImpact": (
             f"**The question was whether complaint themes lead the review score.** If crash complaints "
             f"spike three days before the score moves, a community team has a usable early-warning "

@@ -80,15 +80,18 @@ leads in seven of eight themes, up to twelve days.
 
 ## Limitations
 
+**The thumbs-up is binary, and that is the limitation I would raise first.** Steam gives
+one bit per review, so "great game, terrible servers" is recorded exactly the same as
+"perfect". When I hand-labelled 200 reviews, 19 were genuinely mixed — and
+Steam had 17 of those as positive. Roughly one in ten of the sample is flattened into a
+category it does not belong in. It is why I treat the daily positive share as a
+direction, not a measurement: the shape of the collapses is real, but I would not defend
+the exact level of any single day.
+
 **Steam reviewers self-select.** This measures people moved enough to write something,
 not players. Both events here were the kind that motivate writing — an account
 requirement and a balance change — so the corpus is probably closer to "engaged and
 annoyed" than to the playerbase.
-
-**Sentiment is a thumbs-up, not a measurement.** Steam's flag is binary, so a review
-saying "great game, terrible servers" counts identically to one saying "perfect". The
-200 hand-labelled reviews included 19 that were genuinely mixed, and the flag
-cannot represent them. This understates ambivalence throughout.
 
 **Two standard sentiment tools were tested and rejected.** VADER agreed with the hand
 labels 61.5% of the time and a RoBERTa sentiment model 64.0%, against a 72.0%
