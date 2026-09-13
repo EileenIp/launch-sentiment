@@ -6,8 +6,9 @@ She asked the agent to draft them on 2026-09-13. They are the agent's words EXCE
 opening of Limitations and the "blunt signal" paragraph in the Recommendation, both of
 which are hers: she identified the binary thumbs-up as the limitation she would raise
 first, confirmed "direction, not measurement" as how far she would trust the daily
-share, and answered the obvious objection to the threshold with "a 12-point drop is
-still a 12-point drop". Those two paragraphs should be left as written.
+share, answered the obvious objection to the threshold with "a 12-point drop is still a
+12-point drop", and gave the opening of "On the result being a null" — "a good outcome,
+better than forcing a fake finding". Those three passages should be left as written.
 Every other claim is traceable to a number this project actually produced --
 the validation figures, the truncation coverage, the threshold table -- and the
 threshold recommendation was derived by testing rules against the data rather than
@@ -121,6 +122,12 @@ leads in seven of eight themes, up to twelve days.
    minimum day size rises, and their significance evaporates. A real lead persists as
    measurement improves. On a 150-review day there are around 15 complaints, so one
    review shifts a theme's share by seven points.
+
+## On the result being a null
+
+This is a good outcome — better than forcing a fake finding. The first correlation table
+showed a twelve-day lead and looked publishable. Three checks later there was nothing
+there. A number that does not survive being tested is worth less than no number.
 
 ## What was measured
 
@@ -296,7 +303,8 @@ def build_deck(s: dict):
            "Not prediction — but it answers 'what is this about' before anyone reads a review"])
 
     slide("Why the null is trustworthy",
-          ["Raw correlation showed leads in 7 of 8 themes, up to 12 days",
+          ["A good outcome — better than forcing a fake finding",
+           "Raw correlation showed leads in 7 of 8 themes, up to 12 days",
            "Rotation test: chance alone produces most of that",
            "Correcting for 8 themes leaves only Sony/PSN, at lag zero",
            "Apparent leads move +3 -> +12 -> -8 days as thin days are excluded"])

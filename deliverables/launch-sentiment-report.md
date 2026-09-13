@@ -55,6 +55,12 @@ leads in seven of eight themes, up to twelve days.
    measurement improves. On a 150-review day there are around 15 complaints, so one
    review shifts a theme's share by seven points.
 
+## On the result being a null
+
+This is a good outcome — better than forcing a fake finding. The first correlation table
+showed a twelve-day lead and looked publishable. Three checks later there was nothing
+there. A number that does not survive being tested is worth less than no number.
+
 ## What was measured
 
 - **886,850 reviews** across 271 days, 100% of what Steam reports for
